@@ -457,9 +457,17 @@ async function loadFFmpeg(onStatus){
       const {toBlobURL}=await import(/* @vite-ignore */ src.util);
       const ffmpeg=new FFmpeg();
       ffmpeg.on('log',({message})=>console.log('[ffmpeg]',message));
+      // El worker.js de @ffmpeg/ffmpeg vive junto a index.js en el mismo CDN.
+      // Si se lo dejamos apuntando a esa URL remota, el navegador rechaza crear
+      // el Worker por ser de otro origen ("cannot be accessed from origin ...").
+      // Solución: descargarlo también como blob (mismo truco que con el core/wasm)
+      // y pasarlo como classWorkerURL, para que el Worker se cree desde blob:
+      // (mismo origen que la página) en vez de desde unpkg/jsdelivr.
+      const workerJsUrl=src.pkg.replace(/index\.js$/,'worker.js');
       await ffmpeg.load({
         coreURL:await toBlobURL(`${src.core}/ffmpeg-core.js`,'text/javascript'),
         wasmURL:await toBlobURL(`${src.core}/ffmpeg-core.wasm`,'application/wasm'),
+        classWorkerURL:await toBlobURL(workerJsUrl,'text/javascript'),
       });
       return ffmpeg;
     }catch(err){
