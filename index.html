@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fondo Animado — Personalizable</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Inter',system-ui,sans-serif;overflow:hidden;background:#000}
+
+#bg-grid{position:fixed;inset:0;z-index:0}
+#bg-grid canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+/* ══════════ BRAND MARK (opcional, pequeño, no intrusivo) ══════════ */
+.brand{position:fixed;top:22px;left:26px;z-index:50;font-size:0.7rem;letter-spacing:0.28em;text-transform:uppercase;color:rgba(255,255,255,0.55);pointer-events:none;font-weight:500}
+
+/* ══════════ PANEL DE PERSONALIZACIÓN ══════════ */
+#cz-toggle{position:fixed;bottom:22px;right:22px;z-index:600;width:54px;height:54px;border-radius:50%;background:#12141a;border:1px solid rgba(255,255,255,0.14);color:#f2f2f2;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 28px rgba(0,0,0,0.4);transition:transform 0.25s}
+#cz-toggle:hover{transform:scale(1.07)}
+#cz-toggle svg{width:23px;height:23px}
+#cz-panel{position:fixed;top:0;right:0;height:100vh;width:min(400px,92vw);background:#12141a;color:#f2f2f2;z-index:601;transform:translateX(100%);transition:transform 0.35s cubic-bezier(0.25,0.9,0.35,1);overflow-y:auto;font-family:'Inter',sans-serif;box-shadow:-10px 0 40px rgba(0,0,0,0.45);border-left:1px solid rgba(255,255,255,0.08)}
+#cz-panel.open{transform:translateX(0)}
+.cz-inner{padding:1.6rem 1.4rem 3rem}
+.cz-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem}
+.cz-head h3{font-size:1.08rem;font-weight:600}
+.cz-close{background:rgba(255,255,255,0.06);border:none;width:28px;height:28px;border-radius:50%;color:rgba(255,255,255,0.6);cursor:pointer;font-size:0.95rem}
+.cz-close:hover{background:rgba(255,255,255,0.12);color:#fff}
+.cz-note{font-size:0.72rem;line-height:1.55;color:rgba(255,255,255,0.45);margin-bottom:1.4rem}
+.cz-section{margin-bottom:1.6rem}
+.cz-section:last-child{margin-bottom:0}
+.cz-label{font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:0.7rem;display:block}
+.cz-preview{border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;margin-bottom:1.6rem;aspect-ratio:16/9;position:relative;background:#000}
+.cz-preview canvas{width:100%;height:100%;display:block}
+.cz-presets{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;max-height:280px;overflow-y:auto;padding-right:2px}
+.cz-preset{border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.03);border-radius:10px;padding:0.6rem 0.65rem;cursor:pointer;text-align:left;transition:border-color 0.2s,background 0.2s}
+.cz-preset:hover{border-color:rgba(255,255,255,0.3)}
+.cz-preset.active{border-color:#3ecf98;background:rgba(62,207,152,0.1)}
+.cz-dots{display:flex;gap:4px;margin-bottom:0.45rem}
+.cz-dot{width:16px;height:16px;border-radius:50%;border:1px solid rgba(255,255,255,0.25)}
+.cz-preset-name{font-size:0.72rem;font-weight:500;color:#fff;display:block;line-height:1.3}
+.cz-color-row{display:flex;align-items:center;gap:0.6rem;margin-bottom:0.7rem}
+.cz-color-row label{flex:1;font-size:0.8rem;color:rgba(255,255,255,0.75)}
+.cz-color-row input[type=color]{width:34px;height:34px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;background:none;cursor:pointer;padding:0}
+.cz-color-row input[type=text]{width:82px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:#fff;font-size:0.75rem;padding:0.35rem 0.5rem;font-family:monospace;text-transform:lowercase}
+.cz-btn{width:100%;padding:0.75rem 1rem;border-radius:100px;font-size:0.8rem;font-weight:500;text-align:center;cursor:pointer;border:none;margin-bottom:0.6rem;transition:opacity 0.2s;display:flex;align-items:center;justify-content:center;gap:0.5rem}
+.cz-btn.reset{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.75)}
+.cz-btn:hover{opacity:0.85}
+.cz-btn:disabled{opacity:0.5;cursor:not-allowed}
+.cz-dl-row{display:flex;gap:0.6rem;margin-bottom:0.6rem}
+.cz-dl-btn{flex:1;padding:0.7rem 0.5rem;border-radius:12px;border:1px solid rgba(255,255,255,0.14);background:rgba(255,255,255,0.05);color:#fff;font-size:0.72rem;font-weight:500;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0.35rem;transition:all 0.2s}
+.cz-dl-btn:hover{border-color:rgba(255,255,255,0.35);background:rgba(255,255,255,0.09)}
+.cz-dl-btn:disabled{opacity:0.4;cursor:not-allowed}
+.cz-dl-btn svg{width:20px;height:20px}
+.cz-dl-shape{width:26px;height:15px;border:1.5px solid currentColor;border-radius:2px}
+.cz-dl-shape.vert{width:15px;height:26px}
+.cz-progress{font-size:0.68rem;color:#3ecf98;text-align:center;margin-top:-0.2rem;margin-bottom:0.6rem;min-height:1em}
+.cz-toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:0.9rem}
+.cz-toggle-row label{font-size:0.8rem;color:rgba(255,255,255,0.8)}
+.cz-switch{position:relative;width:42px;height:24px;flex-shrink:0}
+.cz-switch input{opacity:0;width:0;height:0}
+.cz-switch .sl{position:absolute;inset:0;background:rgba(255,255,255,0.14);border-radius:100px;cursor:pointer;transition:background 0.2s}
+.cz-switch .sl::before{content:'';position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform 0.2s}
+.cz-switch input:checked+.sl{background:#3ecf98}
+.cz-switch input:checked+.sl::before{transform:translateX(18px)}
+.cz-switch input:disabled+.sl{opacity:0.4;cursor:not-allowed}
+.cz-slider-row{margin-bottom:0.9rem}
+.cz-slider-row .cz-slider-top{display:flex;justify-content:space-between;font-size:0.78rem;color:rgba(255,255,255,0.75);margin-bottom:0.5rem}
+.cz-slider-row .cz-slider-top span:last-child{color:rgba(255,255,255,0.45);font-family:monospace;font-size:0.72rem}
+.cz-slider-row input[type=range]{width:100%;accent-color:#3ecf98;cursor:pointer}
+.cz-slider-row input[type=range]:disabled{opacity:0.35;cursor:not-allowed}
+@media(max-width:768px){#cz-toggle{bottom:16px;right:16px}}
+</style>
+</head>
+<body>
+
+<div id="bg-grid"><canvas id="liveCanvas"></canvas></div>
+<div class="brand">Fondo animado</div>
+
+<button id="cz-toggle" title="Personalizar" onclick="czToggle()">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.3c2.6 0 4.7-2.1 4.7-4.7C22 6 17.5 2 12 2z"/></svg>
+</button>
+
+<div id="cz-panel">
+  <div class="cz-inner">
+    <div class="cz-head">
+      <h3>Personalizar fondo</h3>
+      <button class="cz-close" onclick="czToggle()">×</button>
+    </div>
+    <p class="cz-note">Elegí un estilo o armá tu propia combinación de colores. Cuando te guste el resultado, descargalo como imagen o como video en loop, en horizontal o vertical.</p>
+
+    <div class="cz-section">
+      <span class="cz-label">Estilos predefinidos</span>
+      <div class="cz-presets" id="cz-presets"></div>
+    </div>
+
+    <div class="cz-section">
+      <span class="cz-label">Colores personalizados</span>
+      <div class="cz-color-row">
+        <label>Fondo</label>
+        <input type="color" id="col-bg"><input type="text" id="hex-bg" maxlength="7">
+      </div>
+      <div class="cz-color-row">
+        <label>Acento</label>
+        <input type="color" id="col-acc"><input type="text" id="hex-acc" maxlength="7">
+      </div>
+    </div>
+
+    <div class="cz-section">
+      <span class="cz-label">Grilla y puntos</span>
+      <div class="cz-toggle-row">
+        <label for="tg-grid">Mostrar grilla (líneas)</label>
+        <label class="cz-switch"><input type="checkbox" id="tg-grid" checked><span class="sl"></span></label>
+      </div>
+      <div class="cz-toggle-row">
+        <label for="tg-dots">Mostrar puntitos</label>
+        <label class="cz-switch"><input type="checkbox" id="tg-dots" checked><span class="sl"></span></label>
+      </div>
+      <div class="cz-slider-row">
+        <div class="cz-slider-top"><span>Tamaño de los puntitos</span><span id="dot-size-val">1.0×</span></div>
+        <input type="range" id="rg-dot-size" min="0" max="4" step="0.1" value="1">
+      </div>
+    </div>
+
+    <div class="cz-section">
+      <span class="cz-label">Descargar imagen (PNG)</span>
+      <div class="cz-dl-row">
+        <button class="cz-dl-btn" id="btn-img-h" onclick="downloadImage('horizontal')">
+          <span class="cz-dl-shape"></span> Horizontal 16:9
+        </button>
+        <button class="cz-dl-btn" id="btn-img-v" onclick="downloadImage('vertical')">
+          <span class="cz-dl-shape vert"></span> Vertical 9:16
+        </button>
+      </div>
+    </div>
+
+    <div class="cz-section">
+      <span class="cz-label">Descargar video MP4 (30s en loop)</span>
+      <div class="cz-dl-row">
+        <button class="cz-dl-btn" id="btn-vid-h" onclick="downloadVideo('horizontal')">
+          <span class="cz-dl-shape"></span> Horizontal 16:9
+        </button>
+        <button class="cz-dl-btn" id="btn-vid-v" onclick="downloadVideo('vertical')">
+          <span class="cz-dl-shape vert"></span> Vertical 9:16
+        </button>
+      </div>
+      <p class="cz-note" style="margin-bottom:0.6rem">Se genera cuadro por cuadro y se codifica en MP4 con la misma nitidez que ves en pantalla (no es una captura en vivo comprimida). La primera vez puede tardar 1–2 minutos porque descarga el codificador.</p>
+      <div class="cz-progress" id="vid-progress"></div>
+    </div>
+
+    <button class="cz-btn reset" onclick="czReset()">Restablecer estilo por defecto</button>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   PRESETS — solo colores de fondo + acento
+   ══════════════════════════════════════════════ */
+const PRESETS=[
+  {name:'Verde Editorial',bg:'#f6f3ec',acc:'#0e6b4a'},
+  {name:'Medianoche Cian',bg:'#12203a',acc:'#00c8f0'},
+  {name:'Negro & Oro',bg:'#0d0d0c',acc:'#c9a227'},
+  {name:'Blanco Minimal',bg:'#ffffff',acc:'#111111'},
+  {name:'Teal & Naranja',bg:'#0a1a1f',acc:'#ff7a3c'},
+  {name:'Rojo Carmesí',bg:'#100505',acc:'#e0263f'},
+  {name:'Azul Profundo',bg:'#060b18',acc:'#2f5dff'},
+  {name:'Verde Neón Matrix',bg:'#020a03',acc:'#39ff6a'},
+  {name:'Púrpura Synthwave',bg:'#160a29',acc:'#d63aff'},
+  {name:'Coral Vibrante',bg:'#fff5f0',acc:'#ff5a3c'},
+  {name:'Grafito Acero',bg:'#1c1e22',acc:'#8fa3b0'},
+  {name:'Ámbar Vintage',bg:'#1b140a',acc:'#d99a3d'},
+  {name:'Rosa Neón Retro',bg:'#100613',acc:'#ff2ea6'},
+  {name:'Azul Eléctrico',bg:'#050914',acc:'#1e6bff'},
+  {name:'Bronce Editorial',bg:'#efe6da',acc:'#8a5a2b'},
+  {name:'Menta Fresca',bg:'#f2fbf7',acc:'#0fae7a'},
+  {name:'Borgoña Elegante',bg:'#160608',acc:'#7a1730'},
+  {name:'Índigo Profundo',bg:'#0a0a1f',acc:'#4b3cc9'},
+  {name:'Lima Ácido',bg:'#0c1108',acc:'#a8e000'},
+  {name:'Plata Futurista',bg:'#f4f5f7',acc:'#5b6773'},
+  {name:'Cobre Cálido',bg:'#1a0f0a',acc:'#c9682e'},
+  {name:'Azul Petróleo',bg:'#081b1e',acc:'#0b7c8c'},
+  {name:'Fucsia Cine',bg:'#12060f',acc:'#e0189c'},
+  {name:'Esmeralda Oscura',bg:'#04140d',acc:'#0f9d5c'},
+  {name:'Naranja Quemado',bg:'#150a05',acc:'#c1501e'},
+  {name:'Carbón Minimal',bg:'#141414',acc:'#f2f2f2'},
+  {name:'Cian Profundo',bg:'#031218',acc:'#0fb8d9'},
+  {name:'Violeta Ultra',bg:'#0d0417',acc:'#8a2be2'},
+  {name:'Rojo Sangre Cine',bg:'#0a0303',acc:'#8b0000'},
+  {name:'Azul Hielo',bg:'#f0f8fc',acc:'#1a7fa8'},
+  {name:'Amarillo Cinemático',bg:'#0e0d05',acc:'#e8c93c'},
+  {name:'Oliva Editorial',bg:'#12140c',acc:'#7a8a3c'},
+  {name:'Crema Cálido',bg:'#fbf6ee',acc:'#a97b3a'},
+];
+
+function hexToRgb(hex){
+  hex=hex.replace('#','');
+  if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');
+  const n=parseInt(hex,16);
+  return{r:(n>>16)&255,g:(n>>8)&255,b:n&255};
+}
+function isValidHex(v){return /^#?[0-9a-fA-F]{6}$/.test(v)}
+function normHex(v){return v.startsWith('#')?v:'#'+v}
+
+/* THEME es el estado global de color actual */
+let THEME={bg:'#f6f3ec',acc:'#0e6b4a'};
+
+/* SETTINGS controla la grilla y los puntitos */
+let SETTINGS={showGrid:true,showDots:true,dotSize:1};
+
+function bindGridControls(){
+  const tgGrid=document.getElementById('tg-grid');
+  const tgDots=document.getElementById('tg-dots');
+  const rgSize=document.getElementById('rg-dot-size');
+  const sizeVal=document.getElementById('dot-size-val');
+
+  function syncDotSlider(){
+    const disabled=!tgDots.checked;
+    rgSize.disabled=disabled;
+  }
+
+  tgGrid.addEventListener('change',()=>{SETTINGS.showGrid=tgGrid.checked;});
+  tgDots.addEventListener('change',()=>{SETTINGS.showDots=tgDots.checked;syncDotSlider();});
+  rgSize.addEventListener('input',()=>{
+    SETTINGS.dotSize=parseFloat(rgSize.value);
+    sizeVal.textContent=SETTINGS.dotSize.toFixed(1)+'×';
+  });
+  syncDotSlider();
+}
+bindGridControls();
+
+function setColorInput(id,hexId,hex){
+  document.getElementById(id).value=hex;
+  document.getElementById(hexId).value=hex;
+}
+
+function applyColors(bg,acc){
+  THEME.bg=bg;THEME.acc=acc;
+}
+
+function clearActivePresets(){
+  document.querySelectorAll('.cz-preset').forEach(el=>el.classList.remove('active'));
+}
+
+function applyPresetByIndex(i){
+  const p=PRESETS[i];
+  applyColors(p.bg,p.acc);
+  setColorInput('col-bg','hex-bg',p.bg);
+  setColorInput('col-acc','hex-acc',p.acc);
+  clearActivePresets();
+  document.querySelectorAll('.cz-preset')[i].classList.add('active');
+}
+
+function buildPresetGrid(){
+  const wrap=document.getElementById('cz-presets');
+  PRESETS.forEach((p,i)=>{
+    const btn=document.createElement('button');
+    btn.className='cz-preset';
+    btn.type='button';
+    btn.innerHTML=`<div class="cz-dots">
+      <span class="cz-dot" style="background:${p.bg}"></span>
+      <span class="cz-dot" style="background:${p.acc}"></span>
+    </div>
+    <span class="cz-preset-name">${p.name}</span>`;
+    btn.addEventListener('click',()=>applyPresetByIndex(i));
+    wrap.appendChild(btn);
+  });
+}
+
+function currentColors(){
+  return{bg:document.getElementById('hex-bg').value,acc:document.getElementById('hex-acc').value};
+}
+
+function bindColorControls(){
+  const roles=[['bg','col-bg','hex-bg'],['acc','col-acc','hex-acc']];
+  roles.forEach(([role,colId,hexId])=>{
+    const colEl=document.getElementById(colId);
+    const hexEl=document.getElementById(hexId);
+    colEl.addEventListener('input',()=>{
+      hexEl.value=colEl.value;
+      const c=currentColors();applyColors(c.bg,c.acc);clearActivePresets();
+    });
+    hexEl.addEventListener('change',()=>{
+      let v=hexEl.value.trim();
+      if(!isValidHex(v)){hexEl.value=colEl.value;return;}
+      v=normHex(v);
+      hexEl.value=v;colEl.value=v;
+      const c=currentColors();applyColors(c.bg,c.acc);clearActivePresets();
+    });
+  });
+}
+
+function czToggle(){document.getElementById('cz-panel').classList.toggle('open')}
+function czReset(){applyPresetByIndex(0)}
+
+buildPresetGrid();
+bindColorControls();
+applyPresetByIndex(0);
+
+/* ══════════════════════════════════════════════
+   MOTOR DE DIBUJO — se reutiliza para:
+   1) el fondo en vivo de la página
+   2) las exportaciones de imagen
+   3) las exportaciones de video
+   El movimiento está calculado con frecuencias que
+   completan ciclos exactos cada LOOP_SECONDS, así el
+   video exportado hace loop perfecto sin salto.
+   ══════════════════════════════════════════════ */
+const LOOP_SECONDS=30;
+const OMEGA=2*Math.PI/LOOP_SECONDS;
+const CELL=60;
+
+function buildNodes(W,H){
+  const cols=Math.ceil(W/CELL)+1, rows=Math.ceil(H/CELL)+1;
+  const nodes=[];
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const k=2+Math.floor(Math.random()*3); // 2..4 ciclos completos por loop
+    nodes.push({x:c*CELL,y:r*CELL,phase:Math.random()*Math.PI*2,k});
+  }
+  return{nodes,cols,rows};
+}
+
+function drawFrame(ctx,W,H,t,theme,geo,settings){
+  settings=settings||{showGrid:true,showDots:true,dotSize:1};
+  const bg=hexToRgb(theme.bg),acc=hexToRgb(theme.acc);
+  const{nodes,cols,rows}=geo;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle=`rgb(${bg.r},${bg.g},${bg.b})`;ctx.fillRect(0,0,W,H);
+  [{x:W*.5,y:H*.15,r:W*.55,a:0.06},{x:W*.1,y:H*.7,r:W*.45,a:0.055},{x:W*.9,y:H*.5,r:W*.4,a:0.045}].forEach(b=>{
+    const g=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r);
+    g.addColorStop(0,`rgba(${acc.r},${acc.g},${acc.b},${b.a})`);g.addColorStop(1,'transparent');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  });
+
+  if(!settings.showGrid && !settings.showDots) return;
+
+  const baseDotR=Math.max(1.2,W/900);
+  const dotR=baseDotR*(settings.dotSize!=null?settings.dotSize:1);
+
+  for(let r=0;r<rows;r++){
+    if(settings.showGrid)ctx.beginPath();
+    for(let c=0;c<cols;c++){
+      const n=nodes[r*cols+c];
+      const pulse=Math.sin(OMEGA*n.k*t+n.phase);
+      if(settings.showGrid){
+        if(c===0)ctx.moveTo(n.x,n.y);else ctx.lineTo(n.x,n.y);
+      }
+      if(settings.showDots && settings.dotSize>0 && pulse>0.7){
+        ctx.save();ctx.beginPath();ctx.arc(n.x,n.y,dotR,0,Math.PI*2);ctx.fillStyle=`rgba(${acc.r},${acc.g},${acc.b},${(pulse-0.7)*0.5})`;ctx.fill();ctx.restore();
+      }
+    }
+    if(settings.showGrid){
+      const rp=Math.sin(OMEGA*t+r*0.5);
+      ctx.strokeStyle=`rgba(${acc.r},${acc.g},${acc.b},${0.012+(rp*.5+.5)*0.02})`;ctx.lineWidth=0.5;ctx.stroke();
+    }
+  }
+  if(settings.showGrid){
+    for(let c=0;c<cols;c++){
+      ctx.beginPath();
+      for(let r=0;r<rows;r++){const n=nodes[r*cols+c];if(r===0)ctx.moveTo(n.x,n.y);else ctx.lineTo(n.x,n.y);}
+      const cp=Math.sin(OMEGA*t+c*0.6);
+      ctx.strokeStyle=`rgba(${acc.r},${acc.g},${acc.b},${0.012+(cp*.5+.5)*0.018})`;ctx.lineWidth=0.5;ctx.stroke();
+    }
+  }
+}
+
+/* ── Fondo en vivo de la página ── */
+(function(){
+  const canvas=document.getElementById('liveCanvas');
+  const ctx=canvas.getContext('2d');
+  let W,H,geo,startT=performance.now();
+  function resize(){
+    W=canvas.width=window.innerWidth;
+    H=canvas.height=window.innerHeight;
+    geo=buildNodes(W,H);
+  }
+  function loop(){
+    const t=(performance.now()-startT)/1000;
+    drawFrame(ctx,W,H,t,THEME,geo,SETTINGS);
+    requestAnimationFrame(loop);
+  }
+  window.addEventListener('resize',resize);
+  resize();loop();
+  window.__liveTime=()=>(performance.now()-startT)/1000;
+})();
+
+/* ══════════════════════════════════════════════
+   DESCARGAS
+   ══════════════════════════════════════════════ */
+function triggerDownload(blob,filename){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+
+function dimsFor(orientation){
+  return orientation==='horizontal'?{W:1920,H:1080}:{W:1080,H:1920};
+}
+
+function downloadImage(orientation){
+  const{W,H}=dimsFor(orientation);
+  const off=document.createElement('canvas');off.width=W;off.height=H;
+  const ctx=off.getContext('2d');
+  const geo=buildNodes(W,H);
+  const t=window.__liveTime?window.__liveTime():0;
+  drawFrame(ctx,W,H,t,THEME,geo,SETTINGS);
+  off.toBlob(blob=>triggerDownload(blob,`fondo-${orientation}.png`),'image/png');
+}
+
+/* ══════════════════════════════════════════════
+   EXPORTACIÓN DE VIDEO — MP4 real, alta calidad
+   En vez de grabar la pantalla en tiempo real (lo
+   que dependía del rendimiento del navegador y
+   comprimía todo a webm de baja calidad), acá se
+   dibuja cada cuadro de forma determinística —
+   igual de nítido que el fondo en vivo— y se
+   codifica con FFmpeg (WebAssembly) directo a
+   H.264/MP4. Así el resultado se ve igual en la
+   pantalla y en el archivo descargado.
+   ══════════════════════════════════════════════ */
+let ffmpegSingleton=null;
+
+/* Varias fuentes por si un CDN falla puntualmente o está bloqueado */
+const FFMPEG_SOURCES=[
+  {
+    pkg:'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js',
+    util:'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js',
+    core:'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm'
+  },
+  {
+    pkg:'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js',
+    util:'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js',
+    core:'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm'
+  }
+];
+
+async function loadFFmpeg(onStatus){
+  if(location.protocol==='file:'){
+    // Muchos navegadores bloquean Workers/WASM cargados desde un archivo abierto
+    // con doble clic (protocolo file://), aunque haya internet. La solución es
+    // servir el archivo por http:// en vez de abrirlo directo.
+    throw new Error(
+      'FILE_PROTOCOL: Esta página se abrió como archivo local (file://). '+
+      'Por seguridad, el navegador bloquea la carga del codificador de video en ese modo, '+
+      'aunque tengas conexión a internet. Solución: serví esta carpeta con un servidor local '+
+      '(por ejemplo, ejecutá "python3 -m http.server" en la carpeta y abrí http://localhost:8000/'+
+      ' en el navegador), o subí el archivo a un hosting y abrilo desde ahí.'
+    );
+  }
+
+  let lastErr=null;
+  for(let i=0;i<FFMPEG_SOURCES.length;i++){
+    const src=FFMPEG_SOURCES[i];
+    try{
+      if(onStatus)onStatus(i===0?'Descargando codificador…':'Reintentando con otra fuente…');
+      const {FFmpeg}=await import(/* @vite-ignore */ src.pkg);
+      const {toBlobURL}=await import(/* @vite-ignore */ src.util);
+      const ffmpeg=new FFmpeg();
+      ffmpeg.on('log',({message})=>console.log('[ffmpeg]',message));
+      await ffmpeg.load({
+        coreURL:await toBlobURL(`${src.core}/ffmpeg-core.js`,'text/javascript'),
+        wasmURL:await toBlobURL(`${src.core}/ffmpeg-core.wasm`,'application/wasm'),
+      });
+      return ffmpeg;
+    }catch(err){
+      console.error(`Fuente ${i} (${src.pkg}) falló:`,err);
+      lastErr=err;
+    }
+  }
+  throw lastErr||new Error('No se pudo cargar el codificador por un motivo desconocido.');
+}
+
+function canvasToJpegBytes(canvas,quality){
+  return new Promise((resolve,reject)=>{
+    canvas.toBlob(blob=>{
+      if(!blob){reject(new Error('toBlob falló'));return;}
+      blob.arrayBuffer().then(buf=>resolve(new Uint8Array(buf)),reject);
+    },'image/jpeg',quality);
+  });
+}
+
+async function downloadVideo(orientation){
+  const buttons=['btn-img-h','btn-img-v','btn-vid-h','btn-vid-v'].map(id=>document.getElementById(id));
+  const progressEl=document.getElementById('vid-progress');
+  buttons.forEach(b=>b.disabled=true);
+
+  const{W,H}=dimsFor(orientation);
+  const FPS=24;
+  const totalFrames=LOOP_SECONDS*FPS;
+  const theme={...THEME};   // congelamos el color elegido para toda la exportación
+  const settings={...SETTINGS}; // congelamos grilla/puntitos elegidos para toda la exportación
+  const geo=buildNodes(W,H);
+
+  const off=document.createElement('canvas');off.width=W;off.height=H;
+  const ctx=off.getContext('2d');
+
+  let ffmpeg;
+  try{
+    ffmpeg=ffmpegSingleton||await loadFFmpeg(msg=>{progressEl.textContent=msg;});
+  }catch(err){
+    console.error(err);
+    buttons.forEach(b=>b.disabled=false);
+    const raw=(err&&err.message)?err.message:String(err);
+    if(raw.startsWith('FILE_PROTOCOL:')){
+      progressEl.textContent=raw.replace('FILE_PROTOCOL: ','');
+      progressEl.style.color='#e0a13e';
+    }else{
+      progressEl.textContent=`No se pudo cargar el codificador: ${raw}`;
+      progressEl.style.color='#e0a13e';
+    }
+    setTimeout(()=>{progressEl.textContent='';progressEl.style.color='';},9000);
+    return;
+  }
+
+  try{
+    for(let i=0;i<totalFrames;i++){
+      const t=i/FPS;
+      drawFrame(ctx,W,H,t,theme,geo,settings);
+      const bytes=await canvasToJpegBytes(off,0.95);
+      await ffmpeg.writeFile(`frame_${String(i).padStart(4,'0')}.jpg`,bytes);
+      if(i%6===0||i===totalFrames-1){
+        const pct=Math.round(((i+1)/totalFrames)*60);
+        progressEl.textContent=`Renderizando cuadros… ${pct}%`;
+      }
+    }
+
+    const onProgress=({progress})=>{
+      const pct=60+Math.round(Math.min(1,Math.max(0,progress))*38);
+      progressEl.textContent=`Codificando video… ${pct}%`;
+    };
+    ffmpeg.on('progress',onProgress);
+
+    progressEl.textContent='Codificando video…';
+    await ffmpeg.exec([
+      '-framerate',String(FPS),
+      '-i','frame_%04d.jpg',
+      '-c:v','libx264',
+      '-pix_fmt','yuv420p',
+      '-crf','18',
+      '-preset','veryfast',
+      '-movflags','+faststart',
+      'output.mp4'
+    ]);
+    ffmpeg.off('progress',onProgress);
+
+    const data=await ffmpeg.readFile('output.mp4');
+    const blob=new Blob([data],{type:'video/mp4'});
+    triggerDownload(blob,`fondo-${orientation}.mp4`);
+
+    // Limpiamos los archivos temporales del sistema de archivos virtual
+    for(let i=0;i<totalFrames;i++){
+      try{await ffmpeg.deleteFile(`frame_${String(i).padStart(4,'0')}.jpg`);}catch(e){}
+    }
+    try{await ffmpeg.deleteFile('output.mp4');}catch(e){}
+    ffmpegSingleton=ffmpeg; // lo reutilizamos si descargan otro video después
+
+    progressEl.textContent='¡Listo! Video MP4 descargado.';
+  }catch(err){
+    console.error(err);
+    progressEl.textContent='Ocurrió un error generando el video. Intentá de nuevo.';
+    try{ffmpeg.terminate();}catch(e){}
+    ffmpegSingleton=null;
+  }finally{
+    setTimeout(()=>{progressEl.textContent='';},3500);
+    buttons.forEach(b=>b.disabled=false);
+  }
+}
+</script>
+</body>
+</html>
